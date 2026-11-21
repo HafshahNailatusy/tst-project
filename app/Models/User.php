@@ -50,4 +50,9 @@ class User extends Authenticatable implements JWTSubject
     {
         return $this->hasMany(Project::class);
     }
+
+    public function tasks()
+    {
+        return $this->hasMany(Task::class);
+    }
 }
