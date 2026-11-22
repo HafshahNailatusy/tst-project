@@ -6,7 +6,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\TaskController;
-
+use App\Http\Controllers\CommentController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -32,4 +32,13 @@ Route::middleware('auth:api')->group(function () {
     Route::put('/tasks/{id}', [TaskController::class, 'update']);
     Route::patch('/tasks/{id}/status', [TaskController::class, 'updateStatus']);
     Route::delete('/tasks/{id}', [TaskController::class, 'destroy']);
+});
+
+Route::middleware('auth:api')->group(function(){
+    Route::get('/comments', [CommentController::class, 'indek']);
+    Route::post('/comments', [CommentController::class, 'store']);
+    Route::get('/comments/{id}', [CommentController::class, 'show']);
+    Route::put('/comments/{id}', [CommentController::class, 'update']);
+    Route::patch('/comments/{id}', [CommentController::class, 'update']);
+    Route::delete('/comments/{id}', [CommentController::class, 'destroy']);
 });
