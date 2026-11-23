@@ -53,10 +53,11 @@ class CommentController extends Controller
     {
         try {
             $data = $request->validate([
-                'user_id' => 'required|exists:users,id',
                 'task_id' => 'required|exists:tasks,id',
-                'content' => 'required|string'
+                'content' => 'required|string',
             ]);
+
+            $data['user_id'] = auth('api')->id();
 
             $comment = Comment::create($data);
 
@@ -76,11 +77,14 @@ class CommentController extends Controller
     {
         try {
             $comment = Comment::findOrFail($id);
+            $user = auth('api')->user();
+
+            if ($user->role !== 'admin' && $comment->user_id !== $user->id) {
+                return $this->error('Anda hanya boleh mengubah comment milik sendiri', 403);
+            }
 
             $data = $request->validate([
-                'user_id' => 'sometimes|required|exists:users,id',
-                'task_id' => 'sometimes|required|exists:tasks,id',
-                'content' => 'sometimes|required|string'
+                'content' => 'required|string'
             ]);
 
             $comment->update($data);

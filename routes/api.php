@@ -39,5 +39,6 @@ Route::middleware('auth:api')->group(function(){
     Route::get('/comments/{id}', [CommentController::class, 'show']);
     Route::put('/comments/{id}', [CommentController::class, 'update']);
     Route::patch('/comments/{id}', [CommentController::class, 'update']);
-    Route::delete('/comments/{id}', [CommentController::class, 'destroy']);
+    Route::delete('/comments/{id}', [CommentController::class, 'destroy'])
+    ->middleware('role:admin');
 });
