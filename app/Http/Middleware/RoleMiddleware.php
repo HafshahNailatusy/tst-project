@@ -22,10 +22,8 @@ class RoleMiddleware
         if (!$user) {
             return $this->error('Token tidak valid atau tidak ada', 401);
         }
-        if (!in_array($user->role, $roles, true)) {
+        else if (!in_array($user->role, $roles, true)) {
             return $this->error('Anda tidak memiliki akses ke sumber daya ini', 403);
-        } else if (!in_array($user->role, ['viewer'], true)) {
-            return $this->error('Perlu login!', 401);
         }
         
         return $next($request);
