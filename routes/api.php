@@ -29,6 +29,7 @@ Route::middleware('auth:api')->group(function () {
     Route::post('/tasks', [TaskController::class, 'store']);
     Route::get('/tasks/{id}', [TaskController::class, 'show']);
     Route::put('/tasks/{id}', [TaskController::class, 'update']);
+    Route::patch('/tasks/{id}', [TaskController::class, 'update']);
     Route::patch('/tasks/{id}/status', [TaskController::class, 'updateStatus']);
     Route::delete('/tasks/{id}', [TaskController::class, 'destroy']);
 });

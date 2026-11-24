@@ -11,19 +11,35 @@ class Task extends Model
 
     protected $fillable = [
         'user_id',
+        'project_id',
+        'category_id',
         'title',
         'description',
+        'deadline',
         'status',
-        'priority',
-        'due_date',
     ];
 
     protected $casts = [
-        'due_date' => 'date',
+        'deadline' => 'date',
     ];
 
     public function user()
     {
         return $this->belongsTo(User::class);
     }
+
+    public function project()
+    {
+        return $this->belongsTo(Project::class);
+    }
+
+    public function comments()
+    {
+        return $this->hasMany(Comment::class);
+    }
+
+    // public function category()
+    // {
+    //     return $this->belongsTo(Category::class);
+    // }
 }
