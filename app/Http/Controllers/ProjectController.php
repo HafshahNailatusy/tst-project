@@ -34,6 +34,7 @@ class ProjectController extends Controller
             );
         }
     }
+
     public function show($id)
     {
         try {
@@ -60,6 +61,7 @@ class ProjectController extends Controller
             );
         }
     }
+
     public function store(Request $request)
     {
         try {
@@ -71,7 +73,8 @@ class ProjectController extends Controller
                 'status' => 'sometimes|in:pending,in_progress,completed'
             ]);
 
-            $project = $request->user()->projects()->create($data);
+            $user = auth('api')->user() ?? $request->user();
+            $project = $user->projects()->create($data);
 
             return $this->apiSuccess(
                 'Project berhasil ditambahkan',
@@ -90,10 +93,23 @@ class ProjectController extends Controller
             );
         }
     }
+
     public function update(Request $request, $id)
     {
         try {
             $project = Project::findOrFail($id);
+            $user = auth('api')->user() ?? $request->user();
+
+            if (
+                $user &&
+                $user->role === 'user' &&
+                (int) $project->user_id !== (int) $user->id
+            ) {
+                return $this->apiError(
+                    'Anda tidak memiliki akses untuk mengubah project ini',
+                    403
+                );
+            }
 
             $data = $request->validate([
                 'name' => 'sometimes|required|string|max:255',
@@ -103,7 +119,7 @@ class ProjectController extends Controller
                 'status' => 'sometimes|in:pending,in_progress,completed'
             ]);
 
-            $project = $request->user()->projects()->update($data);
+            $project->update($data);
 
             return $this->apiSuccess(
                 'Project berhasil diperbarui',
@@ -122,6 +138,7 @@ class ProjectController extends Controller
             );
         }
     }
+
     public function destroy($id)
     {
         try {

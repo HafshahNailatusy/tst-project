@@ -20,10 +20,9 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::middleware('auth:api')->group(function () {
     Route::get('/projects', [ProjectController::class, 'index']);
     Route::post('/projects', [ProjectController::class, 'store']);
-    Route::get('/projects/{project}', [ProjectController::class, 'show']);
-    Route::put('/projects/{project}', [ProjectController::class, 'update']);
-    Route::patch('/projects/{project}', [ProjectController::class, 'update']);
-    Route::delete('/projects/{project}', [ProjectController::class, 'destroy']);
+    Route::get('/projects/{id}', [ProjectController::class, 'show']);
+    Route::put('/projects/{id}', [ProjectController::class, 'update']);
+    Route::patch('/projects/{id}', [ProjectController::class, 'update']);
 });
 
 // TASKS
@@ -65,8 +64,9 @@ Route::middleware('auth:api')->group(function () {
         ->whereNumber('id');
 });
 
-// CATEGORIES - KHUSUS ADMIN
+// CATEGORIES & PROJECTS - KHUSUS ADMIN
 Route::middleware(['auth:api', 'role:admin'])->group(function () {
     Route::delete('/categories/{id}', [CategoryController::class, 'destroy'])
         ->whereNumber('id');
+    Route::delete('/projects/{id}', [ProjectController::class, 'destroy']);
 });
