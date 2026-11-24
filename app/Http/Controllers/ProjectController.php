@@ -4,13 +4,16 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Project;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Validation\ValidationException;
 
 class ProjectController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         try {
+            $user = auth('api')->user() ?? $request->user();
+
             $projects = Project::with('user:id,name,email')
                 ->select(
                     'id',
@@ -22,6 +25,9 @@ class ProjectController extends Controller
                     'status',
                     'created_at'
                 )
+                ->when($user && $user->role !== 'admin', function ($query) use ($user) {
+                    $query->where('user_id', $user->id);
+                })
                 ->get();
 
             return $this->apiSuccess(
@@ -35,7 +41,7 @@ class ProjectController extends Controller
         }
     }
 
-    public function show($id)
+    public function show(Request $request, $id)
     {
         try {
             $project = Project::with('user:id,name,email')
@@ -50,14 +56,31 @@ class ProjectController extends Controller
                 )
                 ->findOrFail($id);
 
+            $user = auth('api')->user() ?? $request->user();
+
+            if (
+                $user &&
+                $user->role !== 'admin' &&
+                (int) $project->user_id !== (int) $user->id
+            ) {
+                return $this->apiError(
+                    'Anda tidak memiliki akses untuk melihat project ini',
+                    403
+                );
+            }
+
             return $this->apiSuccess(
                 'Detail project berhasil ditampilkan',
                 $project
             );
-        } catch (\Throwable $e) {
+        } catch (ModelNotFoundException $e) {
             return $this->apiError(
                 'Project tidak ditemukan',
                 404
+            );
+        } catch (\Throwable $e) {
+            return $this->apiError(
+                'Gagal menampilkan detail project'
             );
         }
     }
@@ -78,7 +101,17 @@ class ProjectController extends Controller
 
             return $this->apiSuccess(
                 'Project berhasil ditambahkan',
-                $project,
+                $project->only([
+                    'id',
+                    'user_id',
+                    'name',
+                    'description',
+                    'start_date',
+                    'end_date',
+                    'status',
+                    'created_at',
+                    'updated_at'
+                ]),
                 201
             );
         } catch (ValidationException $e) {
@@ -102,7 +135,7 @@ class ProjectController extends Controller
 
             if (
                 $user &&
-                $user->role === 'user' &&
+                $user->role !== 'admin' &&
                 (int) $project->user_id !== (int) $user->id
             ) {
                 return $this->apiError(
