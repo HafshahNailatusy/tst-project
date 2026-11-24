@@ -22,10 +22,6 @@ return new class extends Migration
                 ->constrained('projects')
                 ->cascadeOnDelete();
 
-            $table->foreignId('project_id')
-                ->constrained('projects')
-                ->cascadeOnDelete();
-
             $table->unsignedBigInteger('category_id')->nullable();
 
             $table->string('title');
