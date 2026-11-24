@@ -12,18 +12,13 @@ class TaskController extends Controller
 {
     use ApiResponse;
 
-    /**
-     * GET /api/tasks
-     * Menampilkan seluruh daftar task beserta relasi user dan project
-     */
     public function index(Request $request)
     {
         try {
-            // JIKA MODEL CATEGORY & COMMENT SUDAH LENGKAP, ubah with() menjadi:
-            // $query = Task::with(['user:id,name,email,role', 'project:id,name,status', 'category:id,name', 'comments'])->latest();
             $query = Task::with([
                 'user:id,name,email,role',
                 'project:id,name,status',
+                'category:id,name',
             ])->latest();
 
             if ($request->filled('status')) {
@@ -34,23 +29,21 @@ class TaskController extends Controller
                 $query->where('project_id', $request->project_id);
             }
 
+            if ($request->filled('category_id')) {
+                $query->where('category_id', $request->category_id);
+            }
+
             return $this->success($query->get(), 'Daftar task berhasil diambil', 200);
         } catch (Exception $e) {
             return $this->error('Gagal mengambil daftar task: ' . $e->getMessage(), 500);
         }
     }
 
-    /**
-     * POST /api/tasks
-     * Membuat task baru (bisa dilakukan oleh admin maupun user)
-     */
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'project_id'  => 'required|exists:projects,id',
-            // JIKA TABEL CATEGORIES SUDAH ADA, ganti rule category_id di bawah menjadi:
-            // 'category_id' => 'nullable|exists:categories,id',
-            'category_id' => 'nullable|integer',
+            'category_id' => 'nullable|exists:categories,id',
             'title'       => 'required|string|max:255',
             'description' => 'nullable|string',
             'deadline'    => 'nullable|date',
@@ -62,8 +55,14 @@ class TaskController extends Controller
         }
 
         try {
+            $user = auth('api')->user();
+
+            if (!$user) {
+                return $this->error('Unauthenticated', 401);
+            }
+
             $task = Task::create([
-                'user_id'     => auth('api')->id(),
+                'user_id'     => $user->id,
                 'project_id'  => $request->project_id,
                 'category_id' => $request->category_id,
                 'title'       => $request->title,
@@ -72,8 +71,7 @@ class TaskController extends Controller
                 'status'      => $request->status ?? 'pending',
             ]);
 
-            // JIKA MODEL CATEGORY SUDAH ADA, tambahkan 'category:id,name' di dalam load()
-            $task->load(['user:id,name,email,role', 'project:id,name,status']);
+            $task->load(['user:id,name,email,role', 'project:id,name,status', 'category:id,name']);
 
             return $this->success($task, 'Task berhasil dibuat', 201);
         } catch (Exception $e) {
@@ -81,18 +79,13 @@ class TaskController extends Controller
         }
     }
 
-    /**
-     * GET /api/tasks/{id}
-     * Menampilkan detail satu task berdasarkan ID
-     */
     public function show($id)
     {
         try {
-            // JIKA MODEL CATEGORY & COMMENT SUDAH ADA, ubah with() menjadi:
-            // $task = Task::with(['user:id,name,email,role', 'project:id,name,status', 'category:id,name', 'comments.user:id,name'])->find($id);
             $task = Task::with([
                 'user:id,name,email,role',
                 'project:id,name,status',
+                'category:id,name',
             ])->find($id);
 
             if (!$task) {
@@ -105,10 +98,6 @@ class TaskController extends Controller
         }
     }
 
-    /**
-     * PUT/PATCH /api/tasks/{id}
-     * Mengubah data task (Admin: semua task | User: hanya task miliknya sendiri)
-     */
     public function update(Request $request, $id)
     {
         try {
@@ -120,16 +109,17 @@ class TaskController extends Controller
 
             $user = auth('api')->user();
 
-            // Pengecekan RBAC: Admin bisa ubah semua; User hanya milik sendiri
-            if ($user->role !== 'admin' && $task->user_id !== $user->id) {
+            if (!$user) {
+                return $this->error('Unauthenticated', 401);
+            }
+
+            if ($user->role !== 'admin' && (int) $task->user_id !== (int) $user->id) {
                 return $this->error('Akses ditolak: Anda hanya dapat mengubah task milik Anda sendiri', 403);
             }
 
             $validator = Validator::make($request->all(), [
                 'project_id'  => 'sometimes|required|exists:projects,id',
-                // JIKA TABEL CATEGORIES SUDAH ADA, ganti rule category_id di bawah menjadi:
-                // 'category_id' => 'nullable|exists:categories,id',
-                'category_id' => 'nullable|integer',
+                'category_id' => 'nullable|exists:categories,id',
                 'title'       => 'sometimes|required|string|max:255',
                 'description' => 'nullable|string',
                 'deadline'    => 'nullable|date',
@@ -149,8 +139,7 @@ class TaskController extends Controller
                 'status',
             ]));
 
-            // JIKA MODEL CATEGORY SUDAH ADA, tambahkan 'category:id,name' di dalam load()
-            $task->load(['user:id,name,email,role', 'project:id,name,status']);
+            $task->load(['user:id,name,email,role', 'project:id,name,status', 'category:id,name']);
 
             return $this->success($task, 'Task berhasil diperbarui', 200);
         } catch (Exception $e) {
@@ -158,10 +147,6 @@ class TaskController extends Controller
         }
     }
 
-    /**
-     * PATCH /api/tasks/{id}/status
-     * Mengubah status task secara cepat (Admin: semua task | User: hanya task miliknya sendiri)
-     */
     public function updateStatus(Request $request, $id)
     {
         try {
@@ -173,7 +158,11 @@ class TaskController extends Controller
 
             $user = auth('api')->user();
 
-            if ($user->role !== 'admin' && $task->user_id !== $user->id) {
+            if (!$user) {
+                return $this->error('Unauthenticated', 401);
+            }
+
+            if ($user->role !== 'admin' && (int) $task->user_id !== (int) $user->id) {
                 return $this->error('Akses ditolak: Anda hanya dapat mengubah status task milik Anda sendiri', 403);
             }
 
@@ -193,24 +182,23 @@ class TaskController extends Controller
         }
     }
 
-    /**
-     * DELETE /api/tasks/{id}
-     * Menghapus task (Admin: semua task | User: hanya task miliknya sendiri)
-     */
     public function destroy($id)
     {
         try {
+            $user = auth('api')->user();
+
+            if (!$user) {
+                return $this->error('Unauthenticated', 401);
+            }
+
+            if ($user->role !== 'admin') {
+                return $this->error('Akses ditolak: Hanya admin yang dapat menghapus task', 403);
+            }
+
             $task = Task::find($id);
 
             if (!$task) {
                 return $this->error('Task tidak ditemukan', 404);
-            }
-
-            $user = auth('api')->user();
-
-            // Pengecekan RBAC: Admin bisa hapus semua; User hanya milik sendiri
-            if ($user->role !== 'admin' && $task->user_id !== $user->id) {
-                return $this->error('Akses ditolak: Anda hanya dapat menghapus task milik Anda sendiri', 403);
             }
 
             $task->delete();

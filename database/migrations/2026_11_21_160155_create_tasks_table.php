@@ -22,10 +22,13 @@ return new class extends Migration
                 ->constrained('projects')
                 ->cascadeOnDelete();
 
-            // SEMENTARA: dibuat nullable tanpa constrained() karena migration tabel categories belum di-push.
-            // JIKA TABEL CATEGORIES SUDAH ADA, ganti baris di bawah menjadi:
-            // $table->foreignId('category_id')->nullable()->constrained('categories')->nullOnDelete();
+            $table->foreignId('project_id')
+                ->constrained('projects')
+                ->cascadeOnDelete();
+
             $table->unsignedBigInteger('category_id')->nullable();
+
+            $table->string('title');
 
             $table->string('title');
             $table->text('description')->nullable();
